@@ -39,6 +39,15 @@ def valid_exp(df):
     return True
 
 
+def collect_unaccepted_peptides(input, allele, accept_lens, lens):
+    filter_lens = filter(lambda l: l not in accept_lens, lens)
+    filter_peptides = input[input.Peptide.str.len().isin(filter_lens)]
+    filter_peptides['Allele'] = allele
+    filter_peptides['Score'] = "NA"
+    filter_peptides['Present'] = "NA"
+    return filter_peptides
+
+
 def run_PSSM(para, allele):
     global package
     global tmpdir
@@ -47,8 +56,11 @@ def run_PSSM(para, allele):
 
     input = para.input
     lens = [int(l) for l in para.len]
+    accept_lens = para.allele_length.get(allele.split("-")[1])
 
-    input = pd.read_table(input, header = None, names = ['peptide'])
+    input = pd.read_table(input, header = None, names = ['Peptide'])
+    fail_collection = collect_unaccepted_peptides(input, allele, accept_lens, lens)
+
 
     def use_PSSMx(hla, l):
         excluded_hla = ["HLA-" + hla for hla in ["A1101", "A0207", "A0201", "A2402", "A0203", "A0101", "A0301",
@@ -69,13 +81,16 @@ def run_PSSM(para, allele):
     if valid_peptide(input):
         predictions = pd.DataFrame()
         for length in lens:
-            input2 = input[input.peptide.str.len() == length]
+            if length not in accept_lens:
+                continue
+
+            input2 = input[input.Peptide.str.len() == length]
             if input2.shape[0] == 0:
                 continue
 
             if not use_PSSMx(allele, length):
                 tmp_pep = "{}/{}mer_peptide_{}.txt".format(tmpdir, length, uuid.uuid4())
-                input2.peptide.to_csv(tmp_pep, index = False, header = None)
+                input2.Peptide.to_csv(tmp_pep, index = False, header = None)
 
                 peptide = tmp_pep
                 prediction_score = np.array([0])
@@ -94,7 +109,7 @@ def run_PSSM(para, allele):
                 predictions = pd.concat([predictions, prediction_merge])
             else:
                 tmp_pep = "{}/{}mer_peptide_{}.txt".format(tmpdir, length, uuid.uuid4())
-                input2.peptide.to_csv(tmp_pep, index=False, header=None)
+                input2.Peptide.to_csv(tmp_pep, index=False, header=None)
                 peptide = tmp_pep
 
                 pssm_file_resource = 'model/PSSM/PSSMx/pssm_file.lst'
@@ -103,7 +118,7 @@ def run_PSSM(para, allele):
                 predictions = pd.concat([predictions, pssm_prediction[['Peptide','Allele','Score']]])
 
         shutil.rmtree(tmpdir)
-        return predictions
+        return predictions, fail_collection
 
 def PSSM(peptide, length, hla, pssm_file_list):
     global package
@@ -182,13 +197,15 @@ def get_groups(seq, group_by):
 
 
 def run_mode1(para, allele):
-    pssm_output = run_PSSM(para, allele)
-    return pssm_output
+    pssm_output, fail_collection = run_PSSM(para, allele)
+    return pssm_output, fail_collection
 
 def run_mode2(para, allele):
     global package
+    global collections
 
-    pssm = run_PSSM(para, allele).reset_index(drop=True)
+    pssm, fail_collection = run_PSSM(para, allele)
+    pssm = pssm.reset_index(drop=True)
 
     ###load length distribution
     length_dist_resource = 'model/allele_length_distribution.pkl'
@@ -209,7 +226,7 @@ def run_mode2(para, allele):
 
     proba = pd.DataFrame(predictor.predict_proba(scaled_df)[:,1],index = epic_input.Peptide, columns=['Score'])
     proba['Allele'] = allele
-    return proba
+    return proba, fail_collection
 
 
 def build_epic_input(pssm, para, allele_length_dist = None):
@@ -225,9 +242,10 @@ def build_epic_input(pssm, para, allele_length_dist = None):
         epic_input['length'] = epic_input.Peptide.str.len()
         epic_input.length = epic_input.length.replace(allele_length_dist)
 
-    return epic_input
+        return epic_input
 
 def run(para, allele, mode):
+    result = None
     if mode == 1:
         result = run_mode1(para, allele)
     elif mode == 2:

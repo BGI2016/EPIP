@@ -9,26 +9,28 @@ import pandas as pd
 def start():
     para = Parameter().parse()
     results = pd.DataFrame()
+    fail_collections = pd.DataFrame()
     if para.mode == 1 or para.mode == 2:
         print("running...")
         for allele in para.allele.split(","):
-            result = run(para, allele, para.mode)
+            result, fail_collection = run(para, allele, para.mode)
             results = pd.concat([results, result])
+            fail_collections = pd.concat([fail_collections, fail_collection])
         print("writing output...")
-        write_output(results, para)
+        write_output(results, fail_collections, para)
         print("writing output finished.")
     elif para.mode == 3:
         print("add %s to EPIC" % (para.allele))
         retrain(para)
 
 
-def write_output(df, para):
-    df.loc[df.Score > para.threshold, 'Present'] = 1
-    df.Present = df.Present.fillna(0)
+def write_output(results, fail_collections, para):
+    results.loc[results.Score > para.threshold, 'Present'] = 1
+    results.Present = results.Present.fillna(0)
     if para.mode == 2:
-        df['Peptide'] = df.index
+        results['Peptide'] = results.index
 
-    output = df[['Peptide', 'Allele', 'Score', 'Present']]
+    output = pd.concat([results[['Peptide', 'Allele', 'Score', 'Present']], fail_collections])
 
     if para.sort_output:
         output.sort_values('Score', ascending=False).to_csv(para.output, index = False)

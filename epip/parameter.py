@@ -14,7 +14,6 @@ class Parameter():
     def parse(self):
         self._parser.add_argument("-v", "--version", help = "EPIC version", action = "store_true")
         self._parser.add_argument("-a", "--allele", help = 'HLA alleles, separated by ,. Use "-p" to check out supported HLA alleles')
-        self._parser.add_argument("-l", "--length", help = "lengths of peptides, separated by ','.")
         self._parser.add_argument("-f", "--file", help="input file that holds the peptide list")
         self._parser.add_argument("-e", "--exp", help="expression value corresponding to each peptide in the input file."
                                                       "Should be represented by TPM.")
@@ -72,7 +71,6 @@ class Parameter():
             threshold = float(args.threshold)
             self.assign_threshold(0, 1, threshold)
 
-        self.len = args.length.split(",")
         self.sort_output = args.sort
 
         return self
@@ -81,7 +79,6 @@ class Parameter():
     def check_prediction_required_parameters(self, args):
         self.input = args.file
         self.output = args.output
-        self.length = args.length
         self.allele = args.allele
 
         if self.input is None:
@@ -90,15 +87,14 @@ class Parameter():
             raise Exception("Error: output path is required")
         elif self.allele is None:
             raise Exception("Error: HLA allele is required")
-        elif self.length is None:
-            raise Exception("Error: peptides length is required")
+
 
         if args.mode == 2 and args.exp is None:
             raise Exception("Error: expression file is required by mode 2")
         else:
             self.exp = args.exp
 
-        supported_allels_pkl = pkg_resources.resource_filename("epic", "model/supported_alleles.pkl")
+        supported_allels_pkl = pkg_resources.resource_filename("epip", "model/supported_alleles.pkl")
         self.supported_allele_list = joblib.load(supported_allels_pkl)
 
         for allele in self.allele.split(","):
@@ -117,11 +113,11 @@ class Parameter():
         elif self.allele is None:
             raise Exception("Error: HLA allele is required")
 
-        supported_allels_pkl = pkg_resources.resource_filename("epic", "model/supported_alleles.pkl")
+        supported_allels_pkl = pkg_resources.resource_filename("epip", "model/supported_alleles.pkl")
         self.supported_allele_list = joblib.load(supported_allels_pkl)
         self.supported_allele_list.append(self.allele)
 
-        supported_allels_pkl = pkg_resources.resource_filename("epic", "model/supported_alleles.pkl")
+        supported_allels_pkl = pkg_resources.resource_filename("epip", "model/supported_alleles.pkl")
         pickle.dump(self.supported_allele_list, open(supported_allels_pkl, "wb"))
 
 

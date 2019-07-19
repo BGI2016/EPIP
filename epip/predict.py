@@ -10,7 +10,7 @@ import uuid
 import shutil
 
 
-package = "epic"
+package = "epip"
 tmpdir = "{}/{}".format(os.getcwd(), "tmp")
 
 
@@ -39,9 +39,8 @@ def valid_exp(df):
     return True
 
 
-def collect_unaccepted_peptides(input, allele, accept_lens, lens):
-    filter_lens = filter(lambda l: l not in accept_lens, lens)
-    filter_peptides = input[input.Peptide.str.len().isin(filter_lens)]
+def collect_unaccepted_peptides(input, allele, accept_lens):
+    filter_peptides = input[~input.Peptide.str.len().isin(accept_lens)]
     filter_peptides['Allele'] = allele
     filter_peptides['Score'] = "NA"
     filter_peptides['Present'] = "NA"
@@ -55,11 +54,10 @@ def run_PSSM(para, allele):
     os.makedirs(tmpdir, exist_ok=True)
 
     input = para.input
-    lens = [int(l) for l in para.len]
     accept_lens = para.allele_length.get(allele.split("-")[1])
 
     input = pd.read_table(input, header = None, names = ['Peptide'])
-    fail_collection = collect_unaccepted_peptides(input, allele, accept_lens, lens)
+    fail_collection = collect_unaccepted_peptides(input, allele, accept_lens)
 
 
     def use_PSSMx(hla, l):
@@ -80,10 +78,7 @@ def run_PSSM(para, allele):
 
     if valid_peptide(input):
         predictions = pd.DataFrame()
-        for length in lens:
-            if length not in accept_lens:
-                continue
-
+        for length in accept_lens:
             input2 = input[input.Peptide.str.len() == length]
             if input2.shape[0] == 0:
                 continue

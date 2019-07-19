@@ -1,5 +1,5 @@
 include README.rst
-include epic/*
-include epic/model/*
-include epic/model/PSSM/*/*
-include epic/test*
+include epip/*
+include epip/model/*
+include epip/model/PSSM/*/*
+include epip/test*

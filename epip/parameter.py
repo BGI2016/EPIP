@@ -99,8 +99,8 @@ class Parameter():
 
         for allele in self.allele.split(","):
             if allele not in self.supported_allele_list:
-                raise Exception(
-                    'Error: HLA allele %s is not supported by EPICv1.0. Use "-p" to check out supported alleles' % (
+                print(
+                    'Warning: HLA allele %s is not supported by EPICv1.0. Use "-p" to check out supported alleles' % (
                         allele))
 
 

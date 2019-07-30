@@ -39,11 +39,17 @@ def valid_exp(df):
     return True
 
 
-def collect_unaccepted_peptides(input, allele, accept_lens):
-    filter_peptides = input[~input.Peptide.str.len().isin(accept_lens)]
-    filter_peptides['Allele'] = allele
-    filter_peptides['Score'] = "NA"
-    filter_peptides['Present'] = "NA"
+def collect_unaccepted_peptides(input, alleles, allele, accept_lens):
+    if allele.split(r"-")[1] not in alleles:
+        filter_peptides = pd.DataFrame({'Peptide': input.Peptide.tolist(),
+                                        'Allele': allele,
+                                        'Score': "NA",
+                                        "Present": "NA"})
+    else:
+        filter_peptides = input[~input.Peptide.str.len().isin(accept_lens)]
+        filter_peptides['Allele'] = allele
+        filter_peptides['Score'] = "NA"
+        filter_peptides['Present'] = "NA"
     return filter_peptides
 
 
@@ -54,11 +60,15 @@ def run_PSSM(para, allele):
     os.makedirs(tmpdir, exist_ok=True)
 
     input = para.input
-    accept_lens = para.allele_length.get(allele.split("-")[1])
-
     input = pd.read_table(input, header = None, names = ['Peptide'])
-    fail_collection = collect_unaccepted_peptides(input, allele, accept_lens)
+    accept_lens = para.allele_length.get(allele.split("-")[1])
+    alleles = para.allele_length.keys()
 
+    fail_collection = collect_unaccepted_peptides(input, alleles, allele, accept_lens)
+
+    if accept_lens is None:
+        predictions = pd.DataFrame(columns=['Peptide','Allele','Score'])
+        return predictions, fail_collection
 
     def use_PSSMx(hla, l):
         excluded_hla = ["HLA-" + hla for hla in ["A1101", "A0207", "A0201", "A2402", "A0203", "A0101", "A0301",
@@ -208,6 +218,9 @@ def run_mode2(para, allele):
     length_dist = joblib.load(length_dist_file)
 
     epic_input = build_epic_input(pssm, para, length_dist.get(allele.split(r"-")[1]))
+    if epic_input is None:
+        result = pd.DataFrame(columns=['Peptide', 'Allele', 'Score', 'Present'])
+        return result, fail_collection
     # allele = para.allele.split(r"-")[1]
     ###load scaler
     scaler_resource = 'model/scaler.pkl'
@@ -225,6 +238,9 @@ def run_mode2(para, allele):
 
 
 def build_epic_input(pssm, para, allele_length_dist = None):
+    if pssm.shape[0] == 0:
+        return
+
     exp_file = para.exp
     exp = pd.read_table(exp_file, skip_blank_lines=False, header=None, names = ['TPM'])
     peptide_file = para.input

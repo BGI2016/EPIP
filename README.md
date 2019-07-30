@@ -34,4 +34,5 @@ epip-predict -m 2 -l 9,10,11 -a HLA-B0801 -f EPIP/test/test_peptide.txt -e EPIP/
 diff EPIP/test/my_test_peptide_mode2_B0801_myout.txt EPIP/test/test_peptide_mode2_B0801_output.txt
 ```
 __Citation__  
-If you find EPIP is useful to your research or work, please cite <article name>
+If you find EPIP is useful to your research or work, please cite:
+Hu W, Qiu S, Li Y, et al. EPIC: MHC-I epitope prediction integrating mass spectrometry derived motifs and tissue-specific expression profiles[J]. bioRxiv, 2019: 567081.

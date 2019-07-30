@@ -1,5 +1,5 @@
 # EPIP
-EPIP is standing for Epitope Presentation Integrated prediCtion, a tool aims to find out tumor specific neoantigens
+EPIP is standing for Epitope Presentation Integrated Prediction, a tool aims to find out tumor specific neoantigens
 
 #Copyright (c) 2019, BGI-Shenzhen
 
